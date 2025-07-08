@@ -72,11 +72,23 @@ if not product_df.empty and st.session_state.selected_handles:
         st.markdown("## ✅ Selected Products")
         display_product_tiles(selected_preview, page_key="selected")
 
+        # Get selected handles
+        selected_handles = selected_preview["Handle"].dropna().unique()
+
+        # Filter product_df for matching handles
         export_product = (
-            product_df[product_df["Handle"].isin(selected_preview["Handle"])]
-            .sort_values("Handle")
+            product_df[product_df["Handle"].isin(selected_handles)]
             .drop_duplicates()
+            .sort_values("Handle")
         )
+
+# Download button
+st.download_button(
+    "📦 Download Selected Product CSV",
+    data=export_product.to_csv(index=False).encode("utf-8"),
+    file_name="selected_products.csv"
+)
+
         st.download_button("📦 Download Selected Product CSV", data=export_product.to_csv(index=False).encode("utf-8"), file_name="selected_products.csv")
 
         selected_skus = selected_preview["SKU"].dropna().unique()
