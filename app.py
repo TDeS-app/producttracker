@@ -56,7 +56,18 @@ st.session_state.full_product_df = full_product_df if not full_product_df.empty 
 if st.session_state.full_product_df is not None and inventory_file:
     inventory_df = preprocess_sku(read_csv_with_fallback(inventory_file))
     inventory_df = inventory_df[inventory_df["Available"] > 20].copy()
+    # Debug check
+    if 'Handle' not in st.session_state.full_product_df.columns:
+        st.error("🚨 The product data is missing 'Handle' before merging. Check preprocess_sku.")
+    else:
+    st.success("✅ 'Handle' exists before merge.")
     merged_df = st.session_state.full_product_df.merge(inventory_df, on="SKU", how="inner")
+    # Only bring over the fields needed from inventory
+    inventory_clean = inventory_df.drop(columns=[col for col in inventory_df.columns if col in full_product_df.columns and col != "SKU"], errors='ignore')
+
+    # Perform safe merge
+    merged_df = full_product_df.merge(inventory_clean, on="SKU", how="inner")
+
     st.session_state.merged_df_cache = merged_df
 
 # ========== DISPLAY MERGED PRODUCTS ==========
