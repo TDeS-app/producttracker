@@ -1,6 +1,7 @@
 import pandas as pd
 import streamlit as st
 import os
+import re
 from utils import (
     read_csv_with_fallback, preprocess_sku, fuzzy_match_inventory,
     save_selected_handles, extract_sku_number
@@ -8,15 +9,22 @@ from utils import (
 from ui import display_product_tiles
 from state import initialize_session_state
 
-
+st.set_page_config(layout="wide")
 initialize_session_state()
+st.title("🎉 Dropship Product & Inventory Manager")
 
-# Sidebar: Uploads and Search
+# 📁 Ensure product folder exists
+product_folder = "product_files"
+os.makedirs(product_folder, exist_ok=True)
+
+# =========================
+# 📤 Sidebar Uploads
+# =========================
 st.sidebar.header("Upload Files")
-product_files = st.sidebar.file_uploader("Upload Product File(s)", type="csv", accept_multiple_files=True)
+uploaded_product_files = st.sidebar.file_uploader("Upload Product File(s)", type="csv", accept_multiple_files=True)
 inventory_file = st.sidebar.file_uploader("Upload Inventory File", type="csv")
-search_query = st.sidebar.text_input("🔍 Search Products", value=st.session_state.search_query, key="search_box")
 
+search_query = st.sidebar.text_input("🔍 Search Products", value=st.session_state.search_query, key="search_box")
 if search_query != st.session_state.search_query:
     st.session_state.search_query = search_query
     st.session_state.product_page = 1
@@ -25,60 +33,49 @@ if st.sidebar.button("Clear Selection"):
     st.session_state.selected_handles.clear()
     save_selected_handles()
 
-# Product_Folder
-product_folder = "product_files"
-os.makedirs(product_folder, exist_ok=True)
-
-# Upload multiple product files
-uploaded_files = st.file_uploader(
-    "Upload your product CSV files", 
-    type="csv", 
-    accept_multiple_files=True
-)
-
-# Save each uploaded file to the folder
-if uploaded_files:
-    for uploaded_file in uploaded_files:
-        # Save the uploaded file to the folder
+# 💾 Save uploaded product files to folder
+if uploaded_product_files:
+    for uploaded_file in uploaded_product_files:
         with open(os.path.join(product_folder, uploaded_file.name), "wb") as f:
             f.write(uploaded_file.getbuffer())
-    st.success(f"{len(uploaded_files)} product file(s) uploaded and saved to '{product_folder}/' ✅")
-st.set_page_config(layout="wide")
-st.title("🎉 Dropship Product & Inventory Manager")
+    st.success(f"{len(uploaded_product_files)} product file(s) uploaded and saved.")
 
-# Load and process files
-if product_files:
-    product_folder = "product_files"  # Change this to your actual folder name
+# =========================
+# 🧹 Load & Process Product Data
+# =========================
+def clean_sku(s):
+    match = re.search(r'\d+', str(s))
+    return match.group() if match else None
 
-    # 🧹 Function to clean SKU by extracting the first number
-    def clean_sku(s):
-        match = re.search(r'\d+', str(s))
-        return match.group() if match else None
+product_csvs = [f for f in os.listdir(product_folder) if f.endswith(".csv")]
+product_dfs = []
 
-    # 📦 Load and combine all product CSVs
-    product_files = [f for f in os.listdir(product_folder) if f.endswith(".csv")]
-    product_dfs = [pd.read_csv(os.path.join(product_folder, f)) for f in product_files]
-    product_df = pd.concat(product_dfs, ignore_index=True)
+for f in product_csvs:
+    df = pd.read_csv(os.path.join(product_folder, f))
+    df = preprocess_sku(df)
+    product_dfs.append(df)
 
-    # 🧼 Clean product SKUs
-    product_df["SKU"] = product_df["Variant SKU"].apply(clean_sku)
-    product_df.drop(columns=["Variant SKU"], inplace=True)
+if product_dfs:
+    full_product_df = pd.concat(product_dfs, ignore_index=True)
+    st.session_state.full_product_df = full_product_df
+else:
+    st.session_state.full_product_df = None
 
-    dfs = product_df
-    st.session_state.full_product_df = pd.concat(dfs, ignore_index=True)
-
-if product_files and inventory_file:
-    # 📦 Load and clean inventory
-    inventory_df = pd.read_csv("inventory.csv")
-    inventory_df["SKU"] = inventory_df["SKU"].apply(clean_sku)
-
-    # 🧮 Filter inventory to only items with Available > 20
+# =========================
+# 📦 Load & Filter Inventory, Then Merge
+# =========================
+if st.session_state.full_product_df is not None and inventory_file:
+    # Load and preprocess inventory
+    inventory_df = preprocess_sku(read_csv_with_fallback(inventory_file))
     inventory_df = inventory_df[inventory_df["Available"] > 20].copy()
-    
+
+    # Merge on cleaned SKU
     merged_df = fuzzy_match_inventory(st.session_state.full_product_df, inventory_df)
     st.session_state.merged_df_cache = merged_df
 
-# Display merged products
+# =========================
+# 🖼️ Display Merged Products
+# =========================
 if st.session_state.merged_df_cache is not None:
     merged = st.session_state.merged_df_cache
     if not merged.empty:
@@ -88,7 +85,9 @@ if st.session_state.merged_df_cache is not None:
 else:
     st.info("📤 Please upload product and inventory files to begin.")
 
-# Display selected products
+# =========================
+# ✅ Display Selected Products
+# =========================
 if st.session_state.full_product_df is not None:
     selected_preview = st.session_state.full_product_df[
         st.session_state.full_product_df['Handle'].isin(st.session_state.selected_handles)
@@ -105,7 +104,7 @@ if st.session_state.full_product_df is not None:
         # Download matching inventory
         if inventory_file:
             inventory_df = preprocess_sku(read_csv_with_fallback(inventory_file))
-            selected_skus = selected_preview['Variant SKU'].dropna().apply(extract_sku_number).unique()
-            matched_inventory = inventory_df[inventory_df['sku_num'].isin(selected_skus)]
+            selected_skus = selected_preview['SKU'].dropna().unique()
+            matched_inventory = inventory_df[inventory_df['SKU'].isin(selected_skus)]
             csv_inventory = matched_inventory.to_csv(index=False).encode("utf-8")
             st.download_button("📦 Download Matching Inventory CSV", data=csv_inventory, file_name="matching_inventory.csv")
