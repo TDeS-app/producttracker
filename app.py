@@ -1,7 +1,6 @@
 import pandas as pd
 import streamlit as st
 import os
-import re
 from utils import (
     read_csv_with_fallback, preprocess_sku,
     save_selected_handles, extract_sku_number
@@ -77,4 +76,8 @@ if st.session_state.full_product_df is not None:
 
         # Download matching inventory
         if inventory_file:
-            inventory_df = preprocess_sku(read_csv_with
+            inventory_df = preprocess_sku(read_csv_with_fallback(inventory_file))
+            selected_skus = selected_preview['SKU'].dropna().unique()
+            matched_inventory = inventory_df[inventory_df['SKU'].isin(selected_skus)]
+            csv_inventory = matched_inventory.to_csv(index=False).encode("utf-8")
+            st.download_button("📦 Download Matching Inventory CSV", data=csv_inventory, file_name="matching_inventory.csv")
