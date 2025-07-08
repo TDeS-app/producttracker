@@ -81,7 +81,7 @@ def display_product_tiles(df, page_key="product", search_query=""):
             title = group.iloc[0].get("Inventory Title", "No Title")
             image_url = group.iloc[0].get("Image Src", "")
             if image_url:
-                st.image(image_url, use_column_width=True)
+                st.image(image_url, use_container_width=True)
             st.markdown(f"**{title}**")
             st.caption(f"Handle: `{handle}`")
             if st.button("Select", key=f"{page_key}_select_{handle}"):
