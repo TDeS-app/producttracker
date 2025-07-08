@@ -27,15 +27,24 @@ def extract_sku_number(sku):
     return match.group() if match else ''
 
 def preprocess_sku(df):
-    if df is None:
+    if df is None or df.empty:
         return pd.DataFrame()
+
     df = df.copy()
-    sku_col = 'Variant SKU' if 'Variant SKU' in df.columns else 'SKU' if 'SKU' in df.columns else None
+    df.columns = df.columns.str.strip()  # Remove leading/trailing spaces
+    sku_col = None
+    for col in ['Variant SKU', 'SKU']:
+        if col in df.columns:
+            sku_col = col
+            break
+
     if not sku_col:
-        st.warning("⚠️ SKU column not found.")
+        st.warning("⚠️ SKU column not found. Expected 'Variant SKU' or 'SKU'.")
         return pd.DataFrame()
+
     df['sku_num'] = df[sku_col].apply(extract_sku_number)
     return df[df['sku_num'].notna() & (df['sku_num'] != '')]
+
 
 def fuzzy_match_inventory(product_df, inventory_df):
     product_df = preprocess_sku(product_df)
