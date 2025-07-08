@@ -40,6 +40,15 @@ if uploaded_product_files:
 # ========== LOAD PRODUCT FILES ==========
 product_csvs = [f for f in os.listdir(product_folder) if f.endswith(".csv")]
 product_dfs = [preprocess_sku(read_csv_with_fallback(os.path.join(product_folder, f))) for f in product_csvs]
+product_dfs = []
+for f in product_csvs:
+    df = preprocess_sku(read_csv_with_fallback(os.path.join(product_folder, f)))
+    if "Handle" not in df.columns:
+        st.error(f"❌ 'Handle' column missing in file: {f}")
+    else:
+        st.success(f"✅ 'Handle' column found in file: {f}")
+    product_dfs.append(df)
+
 full_product_df = pd.concat(product_dfs, ignore_index=True) if product_dfs else pd.DataFrame()
 st.session_state.full_product_df = full_product_df if not full_product_df.empty else None
 
