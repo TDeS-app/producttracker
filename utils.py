@@ -25,22 +25,22 @@ def preprocess_sku(df):
         return pd.DataFrame()
 
     df = df.copy()
-    df.columns = df.columns.str.strip()  # Clean column names
+    df.columns = df.columns.str.strip()
 
     sku_col = next((col for col in ['Variant SKU', 'SKU'] if col in df.columns), None)
     if sku_col is None:
         st.warning("⚠️ SKU column not found.")
         return pd.DataFrame()
 
-    df["SKU"] = df[sku_col].apply(extract_sku_number)
-    if sku_col != "SKU":
+    df['SKU'] = df[sku_col].apply(extract_sku_number)
+    if sku_col != 'SKU':
         df.drop(columns=[sku_col], inplace=True)
 
-    if "Handle" not in df.columns:
-        st.warning("⚠️ 'Handle' column is missing from this product file.")
-        df["Handle"] = "MISSING_HANDLE_" + df["SKU"]  # Optional fallback
-
-    return df[df["SKU"].notna() & (df["SKU"] != "")]
+    # Clean Handle (for product data only; won't exist in inventory)
+    if 'Handle' in df.columns:
+        df['Handle'] = df['Handle'].astype(str).str.strip()
+        df = df[df['Handle'].str.len() > 0]  # Remove empty strings
+        df = df
 
 
 def save_selected_handles():
