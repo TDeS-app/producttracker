@@ -18,4 +18,7 @@ def initialize_session_state():
         'full_product_df': None,
         'product_page': 1,
         'selected_page': 1,
-        'search_query': ""}
+        'search_query': ""
+    }.items():
+        if key not in st.session_state:
+            st.session_state[key] = default
