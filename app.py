@@ -8,8 +8,6 @@ from utils import (
 from ui import display_product_tiles
 from state import initialize_session_state
 
-st.set_page_config(layout="wide")
-st.title("🎉 Dropship Product & Inventory Manager")
 
 initialize_session_state()
 
@@ -26,6 +24,27 @@ if search_query != st.session_state.search_query:
 if st.sidebar.button("Clear Selection"):
     st.session_state.selected_handles.clear()
     save_selected_handles()
+
+# Product_Folder
+product_folder = "product_files"
+os.makedirs(product_folder, exist_ok=True)
+
+# Upload multiple product files
+uploaded_files = st.file_uploader(
+    "Upload your product CSV files", 
+    type="csv", 
+    accept_multiple_files=True
+)
+
+# Save each uploaded file to the folder
+if uploaded_files:
+    for uploaded_file in uploaded_files:
+        # Save the uploaded file to the folder
+        with open(os.path.join(product_folder, uploaded_file.name), "wb") as f:
+            f.write(uploaded_file.getbuffer())
+    st.success(f"{len(uploaded_files)} product file(s) uploaded and saved to '{product_folder}/' ✅")
+st.set_page_config(layout="wide")
+st.title("🎉 Dropship Product & Inventory Manager")
 
 # Load and process files
 if product_files:
