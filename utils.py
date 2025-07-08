@@ -12,15 +12,15 @@ def save_selected_handles():
     with open(SELECTION_FILE, "w") as f:
         json.dump(list(st.session_state.selected_handles), f)
 
-def read_csv_with_fallback(uploaded_file):
-    content = uploaded_file.read()
-    for enc in ['utf-8-sig', 'ISO-8859-1', 'windows-1252']:
-        try:
-            return pd.read_csv(BytesIO(content), encoding=enc)
-        except Exception:
-            continue
-    st.warning(f"⚠️ Could not read {uploaded_file.name} with common encodings.")
-    return None
+def read_csv_with_fallback(file_path, fallback_path=None):
+    try:
+        return pd.read_csv(file_path, encoding="ISO-8859-1")
+    except FileNotFoundError:
+        if fallback_path:
+            return pd.read_csv(fallback_path, encoding="ISO-8859-1")
+        else:
+            return pd.DataFrame()
+
 
 def extract_sku_number(sku):
     match = re.search(r'\d+', str(sku))
