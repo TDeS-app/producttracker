@@ -47,9 +47,10 @@ if not product_df.empty and inventory_file:
     raw_inventory = read_csv_with_fallback(inventory_file)
     inventory_df = preprocess_sku(raw_inventory)
     inventory_df = inventory_df[inventory_df["Available"] > 20].copy()
+    inventory_df = inventory_df.rename(columns={"Title": "Inventory Title"})
 
     lookup_df = inventory_df.merge(
-        product_df[["SKU", "Title", "Body (HTML)", "Image Src"]],
+        product_df[["SKU", "Image Src", "Body (HTML)"]],
         on="SKU", how="left"
     )
     st.session_state.lookup_inventory = lookup_df
@@ -71,11 +72,9 @@ if not product_df.empty and st.session_state.selected_handles:
         st.markdown("## ✅ Selected Products")
         display_product_tiles(selected_preview, page_key="selected")
 
-        # Export selected product sheet
         export_product = product_df[product_df["Handle"].isin(selected_preview["Handle"])]
         st.download_button("📦 Download Selected Product CSV", data=export_product.to_csv(index=False).encode("utf-8"), file_name="selected_products.csv")
 
-        # Export matching inventory
         selected_skus = selected_preview["SKU"].dropna().unique()
         raw_inventory = read_csv_with_fallback(inventory_file)
         matched_inventory = raw_inventory[
