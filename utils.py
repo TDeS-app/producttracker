@@ -32,14 +32,17 @@ def preprocess_sku(df):
         st.warning("⚠️ SKU column not found.")
         return pd.DataFrame()
 
-    df['SKU'] = df[sku_col].apply(extract_sku_number)
-    if sku_col != 'SKU':
+    df["SKU"] = df[sku_col].apply(extract_sku_number)
+    if sku_col != "SKU":
         df.drop(columns=[sku_col], inplace=True)
 
-    if 'Handle' not in df.columns:
-        st.warning("⚠️ 'Handle' column missing. Product tiles may not display correctly.")
+    # ✅ Ensure Handle is retained if available
+    if 'Handle' in df.columns:
+        df['Handle'] = df['Handle'].astype(str).str.strip()
+    else:
+        st.warning("⚠️ 'Handle' column is missing. Tile display and downloads may fail.")
 
-    return df[df['SKU'].notna() & (df['SKU'] != '')]
+    return df[df["SKU"].notna() & (df["SKU"] != "")]
 
 def save_selected_handles():
     st.session_state.selected_handles = list(set(st.session_state.selected_handles))
