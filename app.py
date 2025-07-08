@@ -72,11 +72,19 @@ if not product_df.empty and st.session_state.selected_handles:
         st.markdown("## ✅ Selected Products")
         display_product_tiles(selected_preview, page_key="selected")
 
-        export_product = product_df[product_df["Handle"].isin(selected_preview["Handle"])]
+        export_product = (
+            product_df[product_df["Handle"].isin(selected_preview["Handle"])]
+            .sort_values("Handle")
+            .drop_duplicates()
+        )
         st.download_button("📦 Download Selected Product CSV", data=export_product.to_csv(index=False).encode("utf-8"), file_name="selected_products.csv")
 
         selected_skus = selected_preview["SKU"].dropna().unique()
-        raw_inventory = read_csv_with_fallback(inventory_file)
+        if inventory_file is not None:
+            inventory_file.seek(0)  # Reset pointer to beginning
+            raw_inventory = pd.read_csv(inventory_file, encoding="ISO-8859-1")
+        else:
+            raw_inventory = pd.DataFrame()
         matched_inventory = raw_inventory[
             raw_inventory["Variant SKU"].apply(lambda s: any(str(s).find(sku) == 0 for sku in selected_skus))
         ]
