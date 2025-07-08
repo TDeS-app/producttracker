@@ -1,3 +1,4 @@
+import pandas as pd
 import streamlit as st
 from utils import (
     read_csv_with_fallback, preprocess_sku, fuzzy_match_inventory,
