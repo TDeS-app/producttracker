@@ -28,11 +28,33 @@ if st.sidebar.button("Clear Selection"):
 
 # Load and process files
 if product_files:
-    dfs = [read_csv_with_fallback(f) for f in product_files]
+    product_folder = "product_files"  # Change this to your actual folder name
+
+    # 🧹 Function to clean SKU by extracting the first number
+    def clean_sku(s):
+        match = re.search(r'\d+', str(s))
+        return match.group() if match else None
+
+    # 📦 Load and combine all product CSVs
+    product_files = [f for f in os.listdir(product_folder) if f.endswith(".csv")]
+    product_dfs = [pd.read_csv(os.path.join(product_folder, f)) for f in product_files]
+    product_df = pd.concat(product_dfs, ignore_index=True)
+
+    # 🧼 Clean product SKUs
+    product_df["SKU"] = product_df["Variant SKU"].apply(clean_sku)
+    product_df.drop(columns=["Variant SKU"], inplace=True)
+
+    dfs = product_df
     st.session_state.full_product_df = pd.concat(dfs, ignore_index=True)
 
 if product_files and inventory_file:
-    inventory_df = read_csv_with_fallback(inventory_file)
+    # 📦 Load and clean inventory
+    inventory_df = pd.read_csv("inventory.csv")
+    inventory_df["SKU"] = inventory_df["SKU"].apply(clean_sku)
+
+    # 🧮 Filter inventory to only items with Available > 20
+    inventory_df = inventory_df[inventory_df["Available"] > 20].copy()
+    
     merged_df = fuzzy_match_inventory(st.session_state.full_product_df, inventory_df)
     st.session_state.merged_df_cache = merged_df
 
