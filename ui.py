@@ -4,10 +4,13 @@ from rapidfuzz import fuzz
 PRODUCTS_PER_PAGE = 20
 
 def display_product_tiles(merged_df, page_key="product", search_query=""):
-    current_page = st.session_state.get(f"{page_key}_page", 1)
+    current_page_key = f"{page_key}_page"
+    current_page = st.session_state.get(current_page_key, 1)
+
     grouped = merged_df.groupby("Handle")
     filtered_grouped = []
 
+    # Fuzzy search filtering
     if search_query:
         for handle, group in grouped:
             row_text = " ".join(group.astype(str).fillna("").values.flatten())
@@ -17,9 +20,23 @@ def display_product_tiles(merged_df, page_key="product", search_query=""):
         filtered_grouped = list(grouped)
 
     total = len(filtered_grouped)
+    total_pages = max(1, (total + PRODUCTS_PER_PAGE - 1) // PRODUCTS_PER_PAGE)
+
+    # Clamp current page to valid range
+    if current_page > total_pages:
+        current_page = total_pages
+        st.session_state[current_page_key] = total_pages
+    elif current_page < 1:
+        current_page = 1
+        st.session_state[current_page_key] = 1
+
     start = (current_page - 1) * PRODUCTS_PER_PAGE
     end = start + PRODUCTS_PER_PAGE
     paginated_grouped = filtered_grouped[start:end]
+
+    if not paginated_grouped:
+        st.info("🔍 No products match your search.")
+        return
 
     for handle, group in paginated_grouped:
         with st.container():
@@ -41,15 +58,15 @@ def display_product_tiles(merged_df, page_key="product", search_query=""):
                         st.image(images, width=100)
                     st.dataframe(group, use_container_width=True)
 
-    total_pages = max(1, (total + PRODUCTS_PER_PAGE - 1) // PRODUCTS_PER_PAGE)
+    # Pagination controls
     col1, col2, col3 = st.columns([1, 1, 2])
     with col1:
         if current_page > 1:
             if st.button("⬅️ Previous", key=f"{page_key}_prev"):
-                st.session_state[f"{page_key}_page"] -= 1
+                st.session_state[current_page_key] = current_page - 1
     with col2:
         if current_page < total_pages:
             if st.button("Next ➡️", key=f"{page_key}_next"):
-                st.session_state[f"{page_key}_page"] += 1
+                st.session_state[current_page_key] = current_page + 1
     with col3:
         st.markdown(f"**Page {current_page} of {total_pages}**")
