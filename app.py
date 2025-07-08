@@ -51,7 +51,7 @@ product_csvs = [f for f in os.listdir(product_folder) if f.endswith(".csv")]
 product_dfs = []
 
 for f in product_csvs:
-    df = pd.read_csv(os.path.join(product_folder, f))
+    df = read_csv_with_fallback(os.path.join(product_folder, f))
     df = preprocess_sku(df)
     product_dfs.append(df)
 
