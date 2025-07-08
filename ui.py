@@ -1,69 +1,47 @@
 import streamlit as st
 from rapidfuzz import fuzz
 
-PRODUCTS_PER_PAGE = 20
-
 def display_product_tiles(merged_df, page_key="product", search_query=""):
     current_page_key = f"{page_key}_page"
     current_page = st.session_state.get(current_page_key, 1)
 
+    # Group by Handle
+    if "Handle" not in merged_df.columns:
+        st.error("🚫 'Handle' column missing. Cannot display product tiles.")
+        return
+
     grouped = merged_df.groupby("Handle")
     filtered_grouped = []
 
-    # Fuzzy search filtering
-    if search_query:
-        for handle, group in grouped:
-            row_text = " ".join(group.astype(str).fillna("").values.flatten())
-            if fuzz.partial_ratio(search_query.lower(), row_text.lower()) > 50:
-                filtered_grouped.append((handle, group))
-    else:
-        filtered_grouped = list(grouped)
+    for handle, group in grouped:
+        title = group.iloc[0].get("Title", "")
+        if search_query.lower() in title.lower() or search_query.lower() in handle.lower():
+            filtered_grouped.append((handle, group))
 
-    total = len(filtered_grouped)
-    total_pages = max(1, (total + PRODUCTS_PER_PAGE - 1) // PRODUCTS_PER_PAGE)
+    items_per_page = 12
+    total_pages = max(1, (len(filtered_grouped) + items_per_page - 1) // items_per_page)
+    current_page = min(current_page, total_pages)
+    st.session_state[current_page_key] = current_page
 
-    # Clamp current page to valid range
-    if current_page > total_pages:
-        current_page = total_pages
-        st.session_state[current_page_key] = total_pages
-    elif current_page < 1:
-        current_page = 1
-        st.session_state[current_page_key] = 1
+    start = (current_page - 1) * items_per_page
+    end = start + items_per_page
+    page_items = filtered_grouped[start:end]
 
-    start = (current_page - 1) * PRODUCTS_PER_PAGE
-    end = start + PRODUCTS_PER_PAGE
-    paginated_grouped = filtered_grouped[start:end]
+    cols = st.columns(3)
+    for idx, (handle, group) in enumerate(page_items):
+        with cols[idx % 3]:
+            st.markdown(f"**{group.iloc[0].get('Title', 'No Title')}**")
+            st.caption(f"Handle: `{handle}`")
+            if st.button("Select", key=f"{page_key}_select_{handle}"):
+                st.session_state.selected_handles.add(handle)
 
-    if not paginated_grouped:
-        st.info("🔍 No products match your search.")
-        return
-
-    for handle, group in paginated_grouped:
-        with st.container():
-            cols = st.columns([0.1, 1.9])
-            with cols[0]:
-                checked = handle in st.session_state.selected_handles
-                if st.checkbox("", value=checked, key=f"{page_key}_cb_{handle}"):
-                    st.session_state.selected_handles.add(handle)
-                else:
-                    st.session_state.selected_handles.discard(handle)
-            with cols[1]:
-                name = group['Title'].iloc[0] if 'Title' in group.columns else handle
-                with st.expander("Details"):
-                    images = group['Image Src'].dropna().unique().tolist() if 'Image Src' in group.columns else []
-                    if images:
-                        st.image(images, width=100)
-                    st.dataframe(group, use_container_width=True)
-
-    # Pagination controls
-    col1, col2, col3 = st.columns([1, 1, 2])
+    # Pagination
+    col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
         if current_page > 1:
-            if st.button("⬅️ Previous", key=f"{page_key}_prev"):
-                st.session_state[current_page_key] = current_page - 1
-    with col2:
+            if st.button("⬅️ Prev", key=f"{page_key}_prev"):
+                st.session_state[current_page_key] -= 1
+    with col3:
         if current_page < total_pages:
             if st.button("Next ➡️", key=f"{page_key}_next"):
-                st.session_state[current_page_key] = current_page + 1
-    with col3:
-        st.markdown(f"**Page {current_page} of {total_pages}**")
+                st.session_state[current_page_key] += 1
