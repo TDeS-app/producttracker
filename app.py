@@ -1,5 +1,6 @@
 import pandas as pd
 import streamlit as st
+import os
 from utils import (
     read_csv_with_fallback, preprocess_sku, fuzzy_match_inventory,
     save_selected_handles, extract_sku_number
