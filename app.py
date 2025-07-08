@@ -82,12 +82,12 @@ if not product_df.empty and st.session_state.selected_handles:
             .sort_values("Handle")
         )
 
-# Download button
-st.download_button(
+    # Download button
+    st.download_button(
     "📦 Download Selected Product CSV",
     data=export_product.to_csv(index=False).encode("utf-8"),
     file_name="selected_products.csv"
-)
+    )
 
         st.download_button("📦 Download Selected Product CSV", data=export_product.to_csv(index=False).encode("utf-8"), file_name="selected_products.csv")
 
