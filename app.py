@@ -3,7 +3,7 @@ import streamlit as st
 import os
 import re
 from utils import (
-    read_csv_with_fallback, preprocess_sku, fuzzy_match_inventory,
+    read_csv_with_fallback, preprocess_sku,
     save_selected_handles, extract_sku_number
 )
 from ui import display_product_tiles
