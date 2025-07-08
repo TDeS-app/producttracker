@@ -49,9 +49,6 @@ def display_product_tiles(merged_df, page_key="product", search_query=""):
                     st.session_state.selected_handles.discard(handle)
             with cols[1]:
                 name = group['Title'].iloc[0] if 'Title' in group.columns else handle
-                available_col = [c for c in group.columns if 'Available' in c or 'On hand' in c]
-                available = group[available_col[0]].iloc[0] if available_col else 'N/A'
-                st.markdown(f"**{name}** - Available: {available}")
                 with st.expander("Details"):
                     images = group['Image Src'].dropna().unique().tolist() if 'Image Src' in group.columns else []
                     if images:
