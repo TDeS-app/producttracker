@@ -30,20 +30,22 @@ def preprocess_sku(df):
     df = df.copy()
     df.columns = df.columns.str.strip()
 
-    # Find SKU column
+    # Find which SKU column is present
     sku_col = next((col for col in ['Variant SKU', 'SKU'] if col in df.columns), None)
-
     if sku_col is None:
-        st.warning("⚠️ SKU column not found. Expected 'Variant SKU' or 'SKU'.")
+        st.warning("⚠️ SKU column not found.")
         return pd.DataFrame()
 
-    # Clean and unify SKU column
-    df['SKU'] = df[sku_col].apply(extract_sku_number)
+    # Extract and standardize SKU
+    df["SKU"] = df[sku_col].apply(extract_sku_number)
 
-    if sku_col != 'SKU':
+    # Drop original if it’s not already called "SKU"
+    if sku_col != "SKU":
         df.drop(columns=[sku_col], inplace=True)
 
-    return df[df['SKU'].notna() & (df['SKU'] != '')]
+    # ✅ Keep all other product/inventory metadata (like Handle, Title, etc.)
+    return df[df["SKU"].notna() & (df["SKU"] != "")]
+
 
 # 💾 Save selected handles to session state
 def save_selected_handles():
